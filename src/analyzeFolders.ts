@@ -6,7 +6,7 @@ import fs from "fs";
 import path from "path";
 import type { JsDocComment } from "./types/common";
 
-export function analyzeFolders(folderPaths: string[], extensions: string[]): void {
+export function analyzeFolders(folderPaths: string[], extensions: string[], outDir: string | null): void {
   const project = new Project();
   folderPaths.forEach((folderPath: string) => {
     extensions.forEach((extension) => {
@@ -14,10 +14,10 @@ export function analyzeFolders(folderPaths: string[], extensions: string[]): voi
     });
   });
 
-  project.getSourceFiles().forEach((sourceFile) => analyzeSourceFile(sourceFile, folderPaths));
+  project.getSourceFiles().forEach((sourceFile) => analyzeSourceFile(sourceFile, folderPaths, outDir));
 }
 
-export function analyzeSourceFile(sourceFile: SourceFile, folderPaths: string[]): void {
+export function analyzeSourceFile(sourceFile: SourceFile, folderPaths: string[], outDir: string | null): void {
   const baseDir = findBasePath(sourceFile.getFilePath(), folderPaths);
   const jsDocComments: JsDocComment[] = [];
 
@@ -26,7 +26,7 @@ export function analyzeSourceFile(sourceFile: SourceFile, folderPaths: string[])
   if (jsDocComments.length > 0) {
     const pathName = getPathName(sourceFile.getFilePath(), baseDir);
     const mdxContent = generateMdxContent(jsDocComments, pathName);
-    const mdxFilePath = getMdxFilePath(sourceFile.getFilePath());
+    const mdxFilePath = getMdxFilePath(sourceFile.getFilePath(), pathName, outDir);
     writeMdxFile(mdxFilePath, mdxContent);
   }
 }
@@ -38,14 +38,21 @@ export function processNode(node: Node, jsDocComments: JsDocComment[]): void {
       const nodeName = getFunctionName(node);
       const commentText = jsDocs.map((doc) => doc.getFullText().trim()).join("\n");
 
-      let nodeCode: string;
+      let nodeCode: string | undefined;
+      let parentName: string | undefined;
       if (Node.isMethodDeclaration(node) && Node.isClassDeclaration(node.getParent())) {
-        nodeCode = node.getParentOrThrow().getText();
+        parentName = getFunctionName(node.getParent());
       } else {
         nodeCode = node.getText();
       }
 
-      jsDocComments.push({ name: nodeName, type: node.getKindName(), comment: commentText, code: nodeCode });
+      jsDocComments.push({
+        name: nodeName,
+        parentName: parentName,
+        type: node.getKindName().replace("Declaration", ""),
+        comment: commentText,
+        code: nodeCode
+      });
     }
   }
 
@@ -62,6 +69,11 @@ export function writeMdxFile(filePath: string, content: string): void {
   fs.writeFileSync(filePath, content);
 }
 
-function getMdxFilePath(filePath: string): string {
-  return filePath.replace(/\.[^/.]+$/, ".doc.mdx");
+function getMdxFilePath(filePath: string, baseDir: string, outDir: string | null): string {
+  if (outDir) {
+    const baseName = path.basename(filePath)
+    return outDir + "/" + baseDir.replace(/\//g, "_") + "_" + baseName.replace(/\.[^/.]+$/, ".mdx");
+  } else {
+    return filePath.replace(/\.[^/.]+$/, ".doc.mdx");
+  }
 }

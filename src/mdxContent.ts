@@ -6,22 +6,20 @@ export function createMdxContent(jsDocComments: JsDocComment[], pathName: string
 
   jsDocComments.forEach((comment: JsDocComment) => {
     if (comment.name != "Unnamed") {
-      mdxContent += `## ${comment.name}\n`;
-      mdxContent += `\`${pathName}\`\n\n`;
-      mdxContent += `**AST Node Type:** *${comment.type}*\n\n`;
-      mdxContent += `#### JSDoc annotations:\n\n`;
-      mdxContent += formatJsDocComment(comment.comment) + "\n\n";
-      mdxContent += `#### Code:\n\n`;
-      mdxContent += "```ts\n" + removeCommentsFromCode(comment.code) + "\n```\n\n";
+      mdxContent += `## ${comment.name} <code class="type-decl">${comment.type}</code>\n`;
     } else {
-        mdxContent += `## \n`;
-        mdxContent += `**AST Node Type:** *${comment.type}*\n\n`;
-        mdxContent += `#### JSDoc annotations:\n\n`;
-        mdxContent += formatJsDocComment(comment.comment) + "\n\n";
-        mdxContent += `#### Code:\n\n`;
-        mdxContent += "```ts\n" + removeCommentsFromCode(comment.code) + "\n```\n\n";
+      mdxContent += `## \n`;
     }
 
+    if (comment.parentName) {
+      mdxContent += `**Parent**: \`${comment.parentName}\`\n\n`;
+    }
+        
+    mdxContent += formatJsDocComment(comment.comment) + "\n\n";
+    if (comment.code) {
+      mdxContent += `#### Code:\n\n`;
+      mdxContent += "```ts\n" + removeCommentsFromCode(comment.code) + "\n```\n\n";
+    }
   });
 
   return mdxContent;

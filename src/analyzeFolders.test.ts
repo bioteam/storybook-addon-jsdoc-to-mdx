@@ -68,7 +68,7 @@ beforeEach(() => {
 
 describe("analyzeFolders", () => {
   it("should create a new Project and add source files for all extensions", () => {
-    analyzeFolders(folderPaths, extensions);
+    analyzeFolders(folderPaths, extensions, null);
 
     expect(Project.prototype.addSourceFilesAtPaths).toHaveBeenCalledTimes(folderPaths.length * extensions.length);
     folderPaths.forEach((folderPath) => {
@@ -83,7 +83,7 @@ describe("analyzeFolders", () => {
 
 describe("analyzeSourceFile", () => {
   it("should process source file correctly", () => {
-    analyzeSourceFile(mockSourceFile, folderPaths);
+    analyzeSourceFile(mockSourceFile, folderPaths, null);
 
     expect(mockSourceFile.getFilePath).toHaveBeenCalled();
   });
@@ -147,7 +147,7 @@ describe("processNode", () => {
       callback(mockNode);
     });
 
-    analyzeSourceFile(mockSourceFile, folderPaths);
+    analyzeSourceFile(mockSourceFile, folderPaths, null);
 
     expect(mockSourceFile.forEachChild).toHaveBeenCalled();
   });
@@ -173,7 +173,7 @@ describe("analyzeSourceFile with JSDoc comments", () => {
         callback(mockNode as unknown as ts.Node);
       });
 
-      analyzeSourceFile(mockSourceFile as unknown as SourceFile, [mockBaseDir]);
+      analyzeSourceFile(mockSourceFile as unknown as SourceFile, [mockBaseDir], null);
 
       // Sprawdzenie, czy fs.writeFileSync zostało wywołane z oczekiwanymi argumentami
       expect(fs.writeFileSync).toHaveBeenCalledWith(mockMdxFilePath, expect.any(String));

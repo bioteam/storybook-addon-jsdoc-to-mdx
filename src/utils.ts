@@ -1,5 +1,6 @@
 import path from "path";
 import ts from "typescript";
+import jsdoc from "jsdoc-api";
 
 export function removeCommentsFromCode(code: string): string {
   const printer = ts.createPrinter({ removeComments: true });
@@ -22,31 +23,43 @@ export function getPathName(filePath: string, baseDir: string): string {
   const extenstion = path.extname(filePath);
   const baseName = path.basename(relativePath, extenstion);
 
+  /*
   if (baseName === "index") {
     return dirName.replace(/\\/g, "/");
-  }
+    }
+    */
 
   return path.join(dirName, baseName).replace(/\\/g, "/");
 }
 
 export function formatJsDocComment(comment: string): string {
-  // We remove the leading /** and trailing */ as well as whitespace at the ends of the comment
-  const trimmedComment = comment.replace(/\/\*\*|\*\/|^\s*\*\/gm|\s*$/g, "").trim();
+  let formatted = "```\n" + comment + "\n```\n"; // fallback
 
-  // We divide the comment into lines and remove unnecessary whitespace
-  const lines = trimmedComment.split("\n").map((line) => line.replace(/^\s*\*\s?/, "").trim());
-
-  // We are looking for the index of the first tag
-  const tagsIndex = lines.findIndex((line) => line.startsWith("@"));
-
-  // Handling the case where there are no tags
-  if (tagsIndex === -1) {
-    return lines.join("\n").trim() + "\n\n```bash\n\n```";
+  const parsed = jsdoc.explainSync({
+    source: `${comment}\nconst x = y;\n`
+  });
+  if (parsed.length === 2) {
+    const parsedComment = parsed[0];
+    formatted = "";
+    //formatted = "```\n" + JSON.stringify(parsedComment, undefined, 2) + "\n```\n\n";
+    if (parsedComment.description) {
+      formatted += `${parsedComment.description}\n`;
+    }
+    if (parsedComment.params && parsedComment.params.length > 0) {
+      let paramTable = "<table>\n";
+      paramTable += "<thead><tr><th>Name</th><th>Type</th><th>Description</th><th>Optional</th></tr></thead>\n";
+      for (const param of parsedComment.params) {
+        paramTable += "<tr>";
+        paramTable += `<td>${param.name}</td>`;
+        paramTable += `<td>\`${JSON.stringify(param.type)}\`</td>`;
+        paramTable += `<td>${param.description}</td>`;
+        paramTable += `<td>${param.optional || ""}</td>`;
+        paramTable += "</tr>\n";
+      }
+      paramTable += "</table>\n";
+      formatted += "\n" + paramTable;
+    }
   }
-
-  // We separate the description from the tags
-  const description = lines.slice(0, tagsIndex).join("\n").trim();
-  const tags = lines.slice(tagsIndex).join("\n").trim().split("@").join("\n@").slice(1);
-
-  return `${description}\n\n\`\`\`bash\n${tags}\n\`\`\``;
+  
+  return formatted;
 }
